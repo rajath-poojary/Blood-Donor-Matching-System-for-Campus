@@ -1,0 +1,19 @@
+{
+  "name": "campus-blood-match",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local campus blood donor matching prototype",
+  "scripts": {
+    "start": "node server.js",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --check server.js && node --check js/app.js && node --check js/login.js && node --check js/store.js && node --check js/qr-card.js && node --test tests/*.test.js",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.56.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

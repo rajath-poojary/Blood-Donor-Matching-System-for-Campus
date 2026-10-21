@@ -1,0 +1,52 @@
+/* login.css */
+/* Minimal specific styles for the login page */
+.auth-tabs {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.auth-tabs .btn {
+    border: none;
+    border-radius: 0;
+    width: 100%;
+    padding: 1rem;
+    font-weight: 600;
+}
+
+#tab-login {
+    border-bottom: 2px solid var(--primary);
+    color: var(--text-primary);
+}
+
+#tab-register {
+    border-bottom: none;
+    color: var(--text-secondary);
+}
+
+.blood-group-selector {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.blood-group-option {
+    padding: 0.5rem;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.blood-group-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.blood-group-option.selected {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}

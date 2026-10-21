@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Blood Match</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons (Lucide) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="./css/index.css?v=8">
+    <link rel="stylesheet" href="./css/animations.css?v=6">
+    <link rel="stylesheet" href="./css/login.css?v=6">
+    <link rel="stylesheet" href="./css/mission-control.css?v=10">
+</head>
+<body class="dark-theme">
+    <a class="skip-link" href="#app">Skip to main content</a>
+    <div id="blood-rain" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div id="toast-container" class="toast-container" role="region" aria-label="Notifications" aria-live="polite" aria-atomic="false"></div>
+    
+    <nav class="navbar glass" aria-label="Primary navigation">
+        <div class="nav-content container">
+            <a href="#home" class="brand" onclick="app.navigate('home', event)">
+                <i data-lucide="droplet" class="brand-icon"></i>
+                <span class="brand-text">BloodMatch<span class="dot">.</span></span>
+            </a>
+            <div class="nav-links" id="nav-links">
+                <!-- Injected via JS based on auth state -->
+            </div>
+            <button class="mobile-menu-btn" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="nav-links" onclick="app.toggleNavMenu()">
+                <i data-lucide="menu"></i>
+            </button>
+        </div>
+    </nav>
+
+    <main id="app" class="app-root main-transition" tabindex="-1">
+        <!-- Content gets injected here -->
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="./js/store.js?v=9"></script>
+    <script src="./js/qr-card.js?v=1"></script>
+    <script src="./js/app.js?v=17"></script>
+    <script src="./js/login.js?v=5"></script>
+    <script>
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    </script>
+</body>
+</html>

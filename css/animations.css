@@ -1,0 +1,134 @@
+/* Micro-animations and Transitions */
+
+/* Page View Transition */
+.view {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Slide in from bottom */
+.slide-up {
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Input focus scale */
+.input-group {
+    transition: transform 0.2s ease;
+}
+.input-group:focus-within {
+    transform: scale(1.02);
+}
+
+/* Card Hover effect */
+.card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 40px rgba(255, 43, 74, 0.15);
+    border-color: rgba(255, 43, 74, 0.3);
+}
+
+/* Pulse Animation for active indicators */
+.pulse-indicator {
+    position: relative;
+}
+.pulse-indicator::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    background-color: var(--primary);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 43, 74, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(255, 43, 74, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 43, 74, 0);
+    }
+}
+
+/* Toast animations */
+.toast {
+    animation: slideInRight 0.3s ease-out forwards;
+}
+.toast.hiding {
+    animation: fadeOutRight 0.3s ease-in forwards;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Stagger item animations */
+.stagger-1 { animation: fadeIn 0.5s ease-out forwards; animation-delay: 0.1s; opacity: 0; }
+.stagger-2 { animation: fadeIn 0.5s ease-out forwards; animation-delay: 0.2s; opacity: 0; }
+.stagger-3 { animation: fadeIn 0.5s ease-out forwards; animation-delay: 0.3s; opacity: 0; }
+.stagger-4 { animation: fadeIn 0.5s ease-out forwards; animation-delay: 0.4s; opacity: 0; }
+
+/* Loader */
+.loader {
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top: 3px solid var(--primary);
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
