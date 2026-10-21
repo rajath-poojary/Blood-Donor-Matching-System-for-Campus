@@ -583,8 +583,8 @@ const server = http.createServer(async (request, response) => {
     }
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-    console.log(`Campus Blood Match is running at http://127.0.0.1:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Campus Blood Match is running on port ${PORT}`);
     if (!readData().users.some(user => user.userType === 'admin')) {
         console.log(`One-time first-admin setup code: ${ADMIN_SETUP_CODE}`);
         console.log('Keep this code private. It can only create the first admin account.');
