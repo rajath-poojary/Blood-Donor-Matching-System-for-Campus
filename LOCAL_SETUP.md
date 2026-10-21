@@ -22,6 +22,8 @@ Install the locked development dependencies with `npm ci`, then install Chromium
 
 On a new database, the server prints a random one-time first-admin setup code in its terminal. Keep it private. The registration page shows the setup-code field only until the first administrator is created. Once used, the code cannot create another admin. Other users register as donors or recipients. The current local database already has an administrator.
 
+For a hosted deployment, you can instead set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` as private service environment variables before starting the service. The server creates the first admin with those credentials only when the database has no admin; the password is stored as a salted hash. Optionally set `BOOTSTRAP_ADMIN_NAME` for the display name. Never commit these values to source code. On Render, add them under your web service's **Environment** settings, then redeploy. Configure a persistent disk for the service's data file so accounts and requests survive restarts; environment-based bootstrap only recreates the initial admin, not other lost data.
+
 ## Live updates and storage
 
 The server pushes updates to connected browser tabs using Server-Sent Events. The local database remains on this computer and is loaded when the app restarts. Stopping the server interrupts sign-in and live features; start it again with `npm start`.

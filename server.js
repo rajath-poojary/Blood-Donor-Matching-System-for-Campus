@@ -11,6 +11,9 @@ const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const PASSWORD_SALT_BYTES = 16;
 const PASSWORD_KEY_BYTES = 64;
 const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || crypto.randomBytes(18).toString('base64url');
+const BOOTSTRAP_ADMIN_EMAIL = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim();
+const BOOTSTRAP_ADMIN_PASSWORD = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+const BOOTSTRAP_ADMIN_NAME = process.env.BOOTSTRAP_ADMIN_NAME?.trim();
 const sessions = new Map();
 const eventClients = new Set();
 const authAttempts = new Map();
@@ -107,6 +110,50 @@ function cleanUser(user) {
         reminderDate: user.reminderDate,
         createdAt: user.createdAt
     };
+}
+
+async function bootstrapAdminFromEnvironment() {
+    const hasEmail = Boolean(BOOTSTRAP_ADMIN_EMAIL);
+    const hasPassword = Boolean(BOOTSTRAP_ADMIN_PASSWORD);
+    if (hasEmail !== hasPassword) {
+        throw new Error('Set both BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD, or leave both unset.');
+    }
+    if (!hasEmail) return;
+
+    const data = readData();
+    if (data.users.some(user => user.userType === 'admin')) return;
+
+    const email = normalizeEmail(BOOTSTRAP_ADMIN_EMAIL);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new Error('BOOTSTRAP_ADMIN_EMAIL must be a valid email address.');
+    }
+    if (BOOTSTRAP_ADMIN_PASSWORD.length < 8) {
+        throw new Error('BOOTSTRAP_ADMIN_PASSWORD must contain at least 8 characters.');
+    }
+    if (data.users.some(user => typeof user.email === 'string' && normalizeEmail(user.email) === email)) {
+        throw new Error('The bootstrap administrator email already belongs to a non-admin account.');
+    }
+
+    const passwordData = await hashPassword(BOOTSTRAP_ADMIN_PASSWORD);
+    data.users.push({
+        id: crypto.randomUUID(),
+        name: BOOTSTRAP_ADMIN_NAME || email.split('@')[0],
+        email,
+        phone: '',
+        location: 'Campus',
+        bloodGroup: null,
+        userType: 'admin',
+        isAvailable: false,
+        sharePhone: false,
+        qrSharePhone: false,
+        lastDonationDate: null,
+        reminderDate: null,
+        passwordSalt: passwordData.salt,
+        passwordHash: passwordData.hash,
+        createdAt: new Date().toISOString()
+    });
+    writeData(data);
+    console.log('Created the first administrator from protected environment configuration.');
 }
 
 function parseCookies(header = '') {
@@ -596,16 +643,6 @@ const server = http.createServer(async (request, response) => {
     }
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Campus Blood Match is running on port ${PORT}`);
-    if (!readData().users.some(user => user.userType === 'admin')) {
-        console.log(`One-time first-admin setup code: ${ADMIN_SETUP_CODE}`);
-        console.log('Keep this code private. It can only create the first admin account.');
-    }
-    console.log(`Local data is stored in ${DATA_FILE}`);
-    console.log('This local prototype is bound to this computer only; do not expose it to the internet.');
-});
-
 function shutDown() {
     for (const client of eventClients) client.end();
     server.close(() => process.exit(0));
@@ -613,3 +650,23 @@ function shutDown() {
 
 process.on('SIGINT', shutDown);
 process.on('SIGTERM', shutDown);
+
+async function startServer() {
+    await bootstrapAdminFromEnvironment();
+    await new Promise((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(PORT, '0.0.0.0', resolve);
+    });
+    console.log(`Campus Blood Match is running on port ${PORT}`);
+    if (!readData().users.some(user => user.userType === 'admin')) {
+        console.log(`One-time first-admin setup code: ${ADMIN_SETUP_CODE}`);
+        console.log('Keep this code private. It can only create the first admin account.');
+    }
+    console.log(`Local data is stored in ${DATA_FILE}`);
+    console.log('This local prototype is bound to this computer only; do not expose it to the internet.');
+}
+
+startServer().catch(error => {
+    console.error('Could not start Campus Blood Match:', error.message);
+    process.exitCode = 1;
+});

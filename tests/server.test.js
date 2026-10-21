@@ -270,3 +270,60 @@ test('auth, donor response review, request lifecycle, analytics, and isolated de
     assert.deepEqual(remaining.payload.map(item => item.id).sort(), [requestId, cancelledRequest.payload.id].sort());
     assert.ok(remaining.payload.every(item => !item.isDemo));
 });
+
+test('bootstrap administrator is created from private environment configuration', async () => {
+    const bootstrapDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'bloodmatch-bootstrap-test-'));
+    const bootstrapDataFile = path.join(bootstrapDirectory, 'local-data.json');
+    const bootstrapEmail = `bootstrap-${randomUUID()}@example.test`;
+    const bootstrapPassword = randomUUID();
+    const port = await allocatePort();
+    const bootstrapUrl = `http://127.0.0.1:${port}`;
+    const bootstrapProcess = spawn(process.execPath, [path.join(projectRoot, 'server.js')], {
+        cwd: projectRoot,
+        env: {
+            ...process.env,
+            PORT: String(port),
+            BLOODMATCH_DATA_FILE: bootstrapDataFile,
+            BOOTSTRAP_ADMIN_EMAIL: bootstrapEmail,
+            BOOTSTRAP_ADMIN_PASSWORD: bootstrapPassword
+        },
+        stdio: 'ignore'
+    });
+
+    try {
+        const deadline = Date.now() + 10000;
+        let statusResponse;
+        while (Date.now() < deadline) {
+            if (bootstrapProcess.exitCode !== null) throw new Error('Bootstrap server exited before becoming ready.');
+            try {
+                statusResponse = await fetch(`${bootstrapUrl}/api/status`);
+                if (statusResponse.ok) break;
+            } catch {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+        assert.ok(statusResponse?.ok, 'Bootstrap server should become ready.');
+        assert.deepEqual(await statusResponse.json(), { adminSetupRequired: false });
+
+        const loginResponse = await fetch(`${bootstrapUrl}/api/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: bootstrapEmail, password: bootstrapPassword })
+        });
+        assert.equal(loginResponse.status, 200);
+        const loginPayload = await loginResponse.json();
+        assert.equal(loginPayload.user.userType, 'admin');
+        assert.equal(loginPayload.user.email, bootstrapEmail);
+
+        const savedUser = JSON.parse(fs.readFileSync(bootstrapDataFile, 'utf8')).users[0];
+        assert.equal(savedUser.userType, 'admin');
+        assert.notEqual(savedUser.passwordHash, bootstrapPassword);
+        assert.notEqual(savedUser.passwordSalt, bootstrapPassword);
+    } finally {
+        if (bootstrapProcess.exitCode === null) {
+            bootstrapProcess.kill();
+            await new Promise(resolve => bootstrapProcess.once('exit', resolve));
+        }
+        fs.rmSync(bootstrapDirectory, { recursive: true, force: true });
+    }
+});
