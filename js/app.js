@@ -164,7 +164,7 @@ const Views = {
         if (user.userType === 'admin') {
             workspace = `<div class="workspace-heading"><div><p class="eyebrow">NETWORK OPERATIONS</p><h3>Live mission board</h3></div><button class="btn btn-secondary" onclick="app.navigate('admin')"><i data-lucide="sliders-horizontal"></i> Admin control room</button></div>
                 ${app.renderRequests(requests, true)}
-                <div class="workspace-heading mt-3"><div><p class="eyebrow">BROADCASTS</p><h3>Campus updates</h3></div></div>${app.renderUpdates(updates)}`;
+                <div class="workspace-heading mt-3"><div><p class="eyebrow">BROADCASTS</p><h3>Campus updates</h3></div></div>${app.renderUpdates(updates, requests, user)}`;
         } else if (user.userType === 'donor') {
             workspace = `<div class="availability-panel ${user.isAvailable ? 'is-available' : ''}">
                     <div class="availability-pulse"><span></span></div><div class="availability-copy"><p class="eyebrow">YOUR DONOR STATUS</p><h3>${user.isAvailable ? 'You’re visible for matching' : 'You’re paused from matching'}</h3><p class="text-sm mt-1">${user.isAvailable ? 'Compatible active requests can find your profile.' : 'Turn availability on whenever you are ready.'}</p></div>
@@ -194,7 +194,7 @@ const Views = {
             ${metrics}
             <div class="mission-board-heading"><div><p class="eyebrow">LIVE NETWORK</p><h2>${user.userType === 'donor' ? 'Your matching feed' : user.userType === 'admin' ? 'Network activity' : 'Your coordination desk'}</h2></div><span class="live-status"><span class="live-dot"></span> UPDATING LIVE</span></div>
             <div class="dashboard-workspace">${workspace}</div>
-            ${user.userType !== 'admin' ? `<section class="mt-3"><h3>Campus notices</h3>${app.renderUpdates(updates)}</section>` : ''}
+            ${user.userType !== 'admin' ? `<section class="mt-3"><h3>Campus notices</h3>${app.renderUpdates(updates, requests, user)}</section>` : ''}
             <p class="notice mt-3"><strong>Safety note</strong> Matching is informational only. Blood group and donor eligibility must be confirmed by qualified medical staff.</p>
         </section>`;
     },
@@ -284,9 +284,9 @@ const Views = {
         return `<section class="view dashboard-view admin-control"><div class="workspace-heading"><div><p class="eyebrow">ADMIN CONTROL ROOM</p><h1 class="page-heading">Network overview</h1></div><button class="btn btn-secondary" onclick="app.navigate('dashboard')"><i data-lucide="arrow-left"></i> Mission control</button></div>
             ${analyticsSection}
             ${demoSection}
-            <div class="card glass mt-3"><h2>Post a campus notice</h2><form onsubmit="app.createNotice(event)" class="mt-2"><div class="form-group"><label class="form-label" for="notice-title">Title</label><input id="notice-title" class="form-input" required maxlength="120"></div><div class="form-group"><label class="form-label" for="notice-body">Details</label><textarea id="notice-body" class="form-input" rows="4" required maxlength="2000"></textarea></div><button class="btn btn-primary" type="submit">Publish notice</button></form></div>
+            <div class="card glass mt-3"><h2>Post a campus notice</h2><p class="text-sm mt-1">Link an active request to let available, compatible donors volunteer directly from the broadcast.</p><form onsubmit="app.createNotice(event)" class="mt-2"><div class="form-group"><label class="form-label" for="notice-title">Title</label><input id="notice-title" class="form-input" required maxlength="120"></div><div class="form-group"><label class="form-label" for="notice-body">Details</label><textarea id="notice-body" class="form-input" rows="4" required maxlength="2000"></textarea></div><div class="form-group"><label class="form-label" for="notice-request">Link to active request (optional)</label><select id="notice-request" class="form-select"><option value="">Announcement only</option>${requests.filter(item => item.status === 'active').map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.patientName)} · ${escapeHtml(item.bloodGroup)} · ${escapeHtml(item.hospital)}</option>`).join('')}</select></div><button class="btn btn-primary" type="submit">Publish notice</button></form></div>
             <h2 class="mt-3">Moderate requests</h2>${app.renderRequests(requests, true)}
-            <h2 class="mt-3">Existing notices</h2>${app.renderUpdates(updates, true)}</section>`;
+            <h2 class="mt-3">Existing notices</h2>${app.renderUpdates(updates, requests, user)}</section>`;
     }
 };
 
@@ -414,16 +414,43 @@ const app = {
             <span class="timeline-node">${step.done ? '<i data-lucide="check"></i>' : `<span>${index + 1}</span>`}</span><span class="timeline-label">${step.label}</span><small>${escapeHtml(step.detail)}</small></li>`).join('')}</ol>`;
     },
 
-    renderUpdates(updates, admin = false) {
+    renderUpdates(updates, requests = [], user = Store.getCurrentUser()) {
         if (!updates.length) return `<div class="card glass"><p>No notices have been posted by an administrator.</p></div>`;
-        return `<div class="grid-2">${updates.map(item => `<article class="card glass"><h4>${escapeHtml(item.title)}</h4><p class="mt-1">${escapeHtml(item.body)}</p><p class="text-sm mt-1">${formatDate(item.created_at)}</p></article>`).join('')}</div>`;
+        return `<div class="grid-2">${updates.map(item => {
+            const request = requests.find(entry => entry.id === item.requestId);
+            const userResponse = request?.responses.find(response => response.donorId === user?.id);
+            let action = '';
+            if (request) {
+                if (request.status !== 'active') {
+                    action = '<p class="text-sm mt-2">This linked request is no longer active.</p>';
+                } else if (!user) {
+                    action = `<button class="btn btn-primary mt-2" onclick="app.joinAs('donor')">Join as a donor to volunteer</button>`;
+                } else if (user.userType === 'donor' && userResponse) {
+                    action = `<p class="text-sm mt-2">Your offer: ${escapeHtml(userResponse.status)}</p>`;
+                } else if (user.userType === 'donor' && !user.isAvailable) {
+                    action = '<p class="text-sm mt-2">Turn on donor availability from Mission Control to volunteer.</p>';
+                } else if (user.userType === 'donor' && !canDonateTo(user.bloodGroup, request.bloodGroup)) {
+                    action = `<p class="text-sm mt-2">This request needs ${escapeHtml(request.bloodGroup)} blood; it is not a match for your profile.</p>`;
+                } else if (user.userType === 'donor') {
+                    action = `<button class="btn btn-primary mt-2" onclick="app.respondToRequest('${escapeHtml(request.id)}')">Volunteer to donate</button>`;
+                }
+            }
+            const requestSummary = request
+                ? `<p class="notice-link-summary mt-2"><strong>${escapeHtml(request.patientName)}</strong> · ${escapeHtml(request.bloodGroup)} · ${escapeHtml(request.hospital)} · ${escapeHtml(request.urgency === 'High' ? 'Urgent' : 'Within 24–48 hours')}</p>`
+                : '';
+            return `<article class="card glass campus-notice"><h3>${escapeHtml(item.title)}</h3><p class="mt-1">${escapeHtml(item.body)}</p>${requestSummary}<p class="text-sm mt-1">${formatDate(item.createdAt)}</p>${action}</article>`;
+        }).join('')}</div>`;
     },
 
     async loadHomeUpdates() {
         const node = document.getElementById('home-updates');
-        if (!node || !Store.getCurrentUser()) return;
+        if (!node) return;
         try {
-            node.innerHTML = `<h3>Campus notices</h3>${this.renderUpdates(await Store.getCampusUpdates())}`;
+            const [updates, requests] = await Promise.all([
+                Store.getCampusUpdates(),
+                Store.getCurrentUser() ? Store.getRequests() : Promise.resolve([])
+            ]);
+            node.innerHTML = `<h3>Campus notices</h3>${this.renderUpdates(updates, requests)}`;
         } catch (error) {
             console.error('Unable to load notices:', error);
         }
@@ -452,7 +479,7 @@ const app = {
         try {
             await Store.addResponseToRequest(requestId, Store.getCurrentUser().id);
             this.toast('Your offer was sent to the requester.', 'success');
-            await this.navigate('dashboard');
+            await this.navigate(this.currentRoute === 'home' ? 'home' : 'dashboard');
         } catch (error) {
             this.toast(error.message || 'Could not send your offer.', 'error');
         }
@@ -500,7 +527,7 @@ const app = {
         if (!window.confirm('Remove only requests labeled DEMO? Regular requests and accounts will stay untouched.')) return;
         try {
             const result = await Store.clearDemoRequests();
-            this.toast(`${result.removed} demo request(s) cleared.`, 'success');
+            this.toast(`${result.removed} demo request(s) and ${result.removedNotices} linked notice(s) cleared.`, 'success');
             await this.navigate('admin');
         } catch (error) {
             this.toast(error.message || 'Could not clear demo requests.', 'error');
@@ -546,7 +573,11 @@ const app = {
     async createNotice(event) {
         event.preventDefault();
         try {
-            await Store.createCampusUpdate(document.getElementById('notice-title').value.trim(), document.getElementById('notice-body').value.trim());
+            await Store.createCampusUpdate(
+                document.getElementById('notice-title').value.trim(),
+                document.getElementById('notice-body').value.trim(),
+                document.getElementById('notice-request').value
+            );
             this.toast('Campus notice published.', 'success');
             await this.navigate('admin');
         } catch (error) {
@@ -617,7 +648,7 @@ const app = {
             }
             if (this.refreshTimer) clearTimeout(this.refreshTimer);
             this.refreshTimer = setTimeout(() => {
-                if (['dashboard', 'admin'].includes(this.currentRoute)) this.navigate(this.currentRoute);
+                if (['dashboard', 'admin', 'home'].includes(this.currentRoute)) this.navigate(this.currentRoute);
             }, 350);
         });
     },

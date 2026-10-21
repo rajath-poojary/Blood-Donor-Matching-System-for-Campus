@@ -313,6 +313,9 @@ async function handleApi(request, response, url) {
         });
         return;
     }
+    if (method === 'GET' && pathname === '/api/notices') {
+        return sendJson(response, 200, data.notices.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    }
 
     requireUser(currentUser);
     if (method === 'GET' && pathname === '/api/users') {
@@ -406,13 +409,18 @@ async function handleApi(request, response, url) {
     if (method === 'DELETE' && pathname === '/api/admin/demo-requests') {
         requireRole(currentUser, ['admin']);
         const before = data.requests.length;
+        const demoRequestIds = new Set(data.requests.filter(item => item.isDemo).map(item => item.id));
         data.requests = data.requests.filter(item => !item.isDemo);
         const removed = before - data.requests.length;
-        if (removed) {
+        const noticesBefore = data.notices.length;
+        data.notices = data.notices.filter(item => !demoRequestIds.has(item.requestId));
+        const removedNotices = noticesBefore - data.notices.length;
+        if (removed || removedNotices) {
             writeData(data);
-            broadcast('blood_requests', 'DELETE');
         }
-        return sendJson(response, 200, { removed });
+        if (removed) broadcast('blood_requests', 'DELETE');
+        if (removedNotices) broadcast('campus_updates', 'DELETE');
+        return sendJson(response, 200, { removed, removedNotices });
     }
     if (method === 'POST' && pathname === '/api/requests') {
         requireRole(currentUser, ['recipient']);
@@ -508,16 +516,18 @@ async function handleApi(request, response, url) {
         }
     }
 
-    if (method === 'GET' && pathname === '/api/notices') {
-        return sendJson(response, 200, data.notices.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
-    }
     if (method === 'POST' && pathname === '/api/notices') {
         requireRole(currentUser, ['admin']);
         const body = await readBody(request);
+        const requestId = body.requestId ? requiredText(body.requestId, 'Linked request', 100) : null;
+        if (requestId && !data.requests.some(item => item.id === requestId && item.status === 'active')) {
+            throw Object.assign(new Error('Choose an active request to link to this notice.'), { status: 400 });
+        }
         const notice = {
             id: crypto.randomUUID(),
             title: requiredText(body.title, 'Title', 120),
             body: requiredText(body.body, 'Details', 2000),
+            requestId,
             createdBy: currentUser.id,
             createdAt: new Date().toISOString()
         };

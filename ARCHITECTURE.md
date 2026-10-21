@@ -21,7 +21,7 @@ Node.js (server.js)
 
 - **Registration and sign-in:** `js/login.js` submits credentials through `js/store.js`; the server validates credentials and role permissions and keeps the session in an HTTP-only cookie.
 - **Requests and donor offers:** the recipient creates a request; the server determines compatible available donors for display; donors submit offers; only the requester can accept or decline an offer and close their request.
-- **Admin operations:** admin-only API routes serve network analytics, notices, request moderation, and explicitly entered demo requests. Demo cleanup only removes records labeled as demo data.
+- **Admin operations:** admin-only API routes serve network analytics, notices, request moderation, and explicitly entered demo requests. Public homepage notices may link to active requests; donor volunteers are submitted as offers by the signed-in donor. Demo cleanup only removes records labeled as demo data and their linked notices.
 - **Live updates:** the browser subscribes to server-sent events. Events trigger a dashboard refresh rather than replacing the server as the source of truth.
 - **Donor QR:** `js/qr-card.js` builds a vCard from the signed-in donor profile. `js/app.js` renders it as a QR image. Phone numbers are included only when the donor enables QR phone sharing.
 - **Security controls:** API mutations reject mismatched browser origins, JSON request bodies must be objects, and API/static responses include browser security headers. Private local data, server source, and dotfiles are not served. Automated dependency auditing runs in CI.

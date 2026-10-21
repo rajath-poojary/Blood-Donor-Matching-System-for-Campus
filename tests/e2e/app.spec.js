@@ -163,19 +163,37 @@ test('empty setup, donor/recipient workflow, QR privacy, and admin notice work i
     await page.getByLabel('Contact number').fill(recipient.phone);
     await page.getByLabel(/I agree to share these request details/).check();
     await page.getByRole('button', { name: 'Broadcast SOS' }).click();
-    await expect(page.getByText(patientName)).toBeVisible();
+    await expect(page.getByRole('heading', { name: patientName })).toBeVisible();
 
     await logoutToHome(page);
+    await loginFromHome(page, admin);
+    await page.getByRole('link', { name: 'Admin', exact: true }).click();
+    const noticeTitle = `Temporary E2E Notice ${runId}`;
+    await page.getByLabel('Title').fill(noticeTitle);
+    await page.getByLabel('Details').fill('This notice exists only in the isolated test database.');
+    const linkedRequestId = await page.locator('#notice-request option').nth(1).getAttribute('value');
+    expect(linkedRequestId).toBeTruthy();
+    await page.locator('#notice-request').selectOption(linkedRequestId);
+    await page.getByRole('button', { name: 'Publish notice' }).click();
+    await expect(page.getByText(noticeTitle)).toBeVisible();
+
+    await logoutToHome(page);
+    await expect(page.getByText(noticeTitle)).toBeVisible();
     await registerFromHome(page, donor);
     await expectAccessible(page);
-    await expect(page.getByText(patientName)).toBeVisible();
+    await expect(page.getByRole('heading', { name: patientName })).toBeVisible();
     await expect(page.locator('#app img')).toHaveCount(0);
+    await page.getByRole('link', { name: 'Home', exact: true }).click();
+    await expect(page.getByText(noticeTitle)).toBeVisible();
+    await page.getByRole('button', { name: 'Volunteer to donate' }).click();
+    await expect(page.getByText('Your offer: offered').first()).toBeVisible();
+    await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+    await expect(page.getByRole('heading', { name: /Welcome back/ })).toBeVisible();
     await page.getByRole('button', { name: 'My settings' }).click();
     await expectAccessible(page);
     await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
     await expect(page.getByRole('heading', { name: /Welcome back/ })).toBeVisible();
-    await page.getByRole('button', { name: 'Send donor offer' }).click();
-    await expect(page.getByText('Your offer: offered')).toBeVisible();
+    await expect(page.getByText('Your offer: offered').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Donor card' }).click();
     await expect(page.getByRole('heading', { name: 'Donor QR card' })).toBeVisible();
@@ -198,11 +216,6 @@ test('empty setup, donor/recipient workflow, QR privacy, and admin notice work i
     await loginFromHome(page, admin);
     await page.getByRole('link', { name: 'Admin', exact: true }).click();
     await expectAccessible(page);
-    const noticeTitle = `Temporary E2E Notice ${runId}`;
-    await page.getByLabel('Title').fill(noticeTitle);
-    await page.getByLabel('Details').fill('This notice exists only in the isolated test database.');
-    await page.getByRole('button', { name: 'Publish notice' }).click();
-    await expect(page.getByText(noticeTitle)).toBeVisible();
 });
 
 test('mobile navigation is keyboard accessible and does not overflow the viewport', async ({ page }) => {

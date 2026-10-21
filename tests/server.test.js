@@ -84,6 +84,7 @@ test('fresh server has no seeded data, protects local files, and rejects cross-o
     assert.deepEqual(status.payload, { adminSetupRequired: true });
     assert.equal((await api('/session')).payload, null);
     assert.equal((await api('/requests')).response.status, 401);
+    assert.equal((await api('/notices')).response.status, 200);
 
     const staticResponse = await fetch(baseUrl);
     assert.equal(staticResponse.status, 200);
@@ -178,6 +179,15 @@ test('auth, donor response review, request lifecycle, analytics, and isolated de
     assert.equal(posted.response.status, 201, posted.payload.error);
     assert.equal(posted.payload.isDemo, undefined);
     const requestId = posted.payload.id;
+    const notice = await api('/notices', {
+        method: 'POST',
+        cookie: admin.cookie,
+        body: { title: `Urgent broadcast ${runId}`, body: 'A linked request needs a donor.', requestId }
+    });
+    assert.equal(notice.response.status, 201, notice.payload.error);
+    assert.equal(notice.payload.requestId, requestId);
+    const publicNotices = await api('/notices');
+    assert.ok(publicNotices.payload.some(item => item.id === notice.payload.id));
 
     const deniedClose = await api(`/requests/${requestId}`, {
         method: 'PATCH', cookie: donor.cookie, body: { status: 'cancelled' }
@@ -205,6 +215,12 @@ test('auth, donor response review, request lifecycle, analytics, and isolated de
         method: 'PATCH', cookie: recipient.cookie, body: { status: 'active' }
     });
     assert.equal(reopened.response.status, 409);
+    const closedRequestNotice = await api('/notices', {
+        method: 'POST',
+        cookie: admin.cookie,
+        body: { title: 'Closed request', body: 'This should not be linked.', requestId }
+    });
+    assert.equal(closedRequestNotice.response.status, 400);
 
     const cancelledRequest = await api('/requests', {
         method: 'POST',
@@ -234,11 +250,21 @@ test('auth, donor response review, request lifecycle, analytics, and isolated de
     assert.equal(analytics.payload.demoRequests, 1);
     assert.equal(analytics.payload.requests.byBloodGroup['AB+'], 1);
 
+    const demoNotice = await api('/notices', {
+        method: 'POST',
+        cookie: admin.cookie,
+        body: { title: `Demo broadcast ${runId}`, body: 'Linked demo notice.', requestId: demo.payload.id }
+    });
+    assert.equal(demoNotice.response.status, 201, demoNotice.payload.error);
+
     const deniedReset = await api('/admin/demo-requests', { method: 'DELETE', cookie: donor.cookie });
     assert.equal(deniedReset.response.status, 403);
     const reset = await api('/admin/demo-requests', { method: 'DELETE', cookie: admin.cookie });
     assert.equal(reset.response.status, 200);
     assert.equal(reset.payload.removed, 1);
+    assert.equal(reset.payload.removedNotices, 1);
+    const noticesAfterReset = await api('/notices');
+    assert.ok(noticesAfterReset.payload.every(item => item.id !== demoNotice.payload.id));
 
     const remaining = await api('/requests', { cookie: admin.cookie });
     assert.deepEqual(remaining.payload.map(item => item.id).sort(), [requestId, cancelledRequest.payload.id].sort());

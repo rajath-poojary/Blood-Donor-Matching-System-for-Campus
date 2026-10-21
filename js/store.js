@@ -146,10 +146,10 @@ const Store = {
         return this.request('/notices');
     },
 
-    async createCampusUpdate(title, body) {
+    async createCampusUpdate(title, body, requestId) {
         return this.request('/notices', {
             method: 'POST',
-            body: JSON.stringify({ title, body })
+            body: JSON.stringify({ title, body, requestId: requestId || null })
         });
     },
 

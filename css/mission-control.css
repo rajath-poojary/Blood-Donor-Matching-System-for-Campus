@@ -320,6 +320,8 @@ main.app-root { margin-top: 72px; }
 .response-row p { font-size: .75rem; }
 .response-row .btn { padding: .5rem .75rem; font-size: .72rem; }
 .mission-card > .text-sm { font-size: .74rem; }
+.campus-notice { border-color: rgba(240,68,97,.2); }
+.notice-link-summary { padding: .7rem .8rem; border: 1px solid rgba(189,202,222,.1); border-radius: 10px; background: rgba(8,11,17,.35); color: #aab5c5; font-size: .75rem; line-height: 1.6; }
 
 .admin-control .stats .card, .admin-control .card.glass { border-radius: 15px; }
 .admin-control .analytics-card { padding: 1.3rem; }

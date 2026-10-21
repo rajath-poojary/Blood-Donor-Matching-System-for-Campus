@@ -16,7 +16,8 @@ The app stores its local data in the ignored `local-data.json` file. For a new d
 - Donor and recipient registration, sign-in, editable profiles, and donor availability.
 - Recipient blood requests, compatible donor matching, donor offers, and recipient accept/decline decisions.
 - Requesters can mark requests fulfilled or cancelled; administrators can cancel active requests.
-- Live in-browser updates, campus notices, optional browser reminders, and donor QR cards.
+- Public homepage campus broadcasts that can link to an active request; eligible signed-in donors can volunteer directly from the notice.
+- Live in-browser updates, optional browser reminders, and donor QR cards.
 - Admin analytics for account counts, request status, donor responses, fulfillment, and requests by blood group.
 - Admin-entered demo requests are labeled `DEMO` and can be cleared separately. No demo records are generated automatically.
 
