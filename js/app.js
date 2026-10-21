@@ -130,7 +130,29 @@ const Views = {
                     <div class="form-group"><label class="form-label" for="auth-password">Password</label><input id="auth-password" class="form-input" type="password" minlength="8" required autocomplete="current-password"></div>
                     <button type="submit" class="btn btn-primary w-full" id="auth-submit-btn">Log in</button>
                 </form>
+                <p class="text-sm mt-2 admin-login-link">Campus administrator? <button class="text-button" onclick="app.navigate('admin-login')">Admin sign in</button></p>
                 <p class="text-sm mt-2">Your password is securely stored. Contact the campus administrator if you need help with your account.</p>
+            </div>
+        </section>`,
+
+    'admin-login': () => `
+        <section class="view narrow admin-login-view">
+            <div class="card glass admin-login-card">
+                <p class="eyebrow">ADMINISTRATOR ACCESS</p>
+                <h1 class="auth-heading">Admin sign in</h1>
+                <p class="text-sm mb-3">Use the administrator email and password created for this server.</p>
+                <form id="admin-auth-form" onsubmit="loginApp.handleAdminAuth(event)">
+                    <div class="form-group">
+                        <label class="form-label" for="admin-auth-email">Admin email</label>
+                        <input id="admin-auth-email" class="form-input" type="email" required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="admin-auth-password">Password</label>
+                        <input id="admin-auth-password" class="form-input" type="password" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full" id="admin-auth-submit">Sign in as admin</button>
+                </form>
+                <button class="btn btn-secondary w-full mt-2" type="button" onclick="app.navigate('login')">Back to account sign in</button>
             </div>
         </section>`,
 

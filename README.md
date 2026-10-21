@@ -14,6 +14,7 @@ The app stores its local data in the ignored `local-data.json` file. For a new d
 
 - A mission-control interface with data-driven overview cards and a per-request timeline from opening through donor offers and closure.
 - Donor and recipient registration, sign-in, editable profiles, and donor availability.
+- Separate administrator sign-in page with server-enforced admin-only authentication.
 - Recipient blood requests, compatible donor matching, donor offers, and recipient accept/decline decisions.
 - Requesters can mark requests fulfilled or cancelled; administrators can cancel active requests.
 - Public homepage campus broadcasts that can link to an active request; eligible signed-in donors can volunteer directly from the notice.

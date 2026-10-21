@@ -55,6 +55,16 @@ const Store = {
         return this.currentUser;
     },
 
+    async adminLogin(email, password) {
+        const result = await this.request('/admin/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password })
+        });
+        this.currentUser = result.user;
+        app.startRealtime();
+        return this.currentUser;
+    },
+
     async logout() {
         await this.request('/logout', { method: 'POST', body: '{}' });
         if (this.eventSource) {

@@ -134,6 +134,20 @@ test('auth, donor response review, request lifecycle, analytics, and isolated de
         name: `Donor ${runId}`, email: `donor-${runId}@example.test`, password: `${testPassword}-donor`,
         phone: runDigits.slice(10, 20), location: `North dorm ${runId}`, userType: 'donor', bloodGroup: 'O-'
     });
+    const deniedAdminLogin = await api('/admin/login', {
+        method: 'POST',
+        body: { email: donor.user.email, password: `${testPassword}-donor` }
+    });
+    assert.equal(deniedAdminLogin.response.status, 401);
+    assert.equal(deniedAdminLogin.response.headers.get('set-cookie'), null);
+    const adminLogin = await api('/admin/login', {
+        method: 'POST',
+        body: { email: admin.user.email, password: testPassword }
+    });
+    assert.equal(adminLogin.response.status, 200, adminLogin.payload.error);
+    assert.equal(adminLogin.payload.user.userType, 'admin');
+    assert.ok(adminLogin.response.headers.get('set-cookie'));
+
     const savedData = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
     savedData.users.find(item => item.id === donor.user.id).email = ` ${donor.user.email.toUpperCase()} `;
     fs.writeFileSync(dataFile, JSON.stringify(savedData, null, 2));

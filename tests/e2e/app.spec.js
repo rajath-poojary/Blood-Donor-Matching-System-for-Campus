@@ -85,10 +85,18 @@ async function registerFromHome(page, account) {
 }
 
 async function loginFromHome(page, account) {
-    await page.getByRole('button', { name: 'Log in' }).click();
-    await page.getByLabel('Email').fill(account.email);
-    await page.getByLabel('Password').fill(account.password);
-    await page.locator('#auth-submit-btn').click();
+    if (account.userType === 'admin') {
+        await page.getByRole('button', { name: 'Log in' }).click();
+        await page.getByRole('button', { name: 'Admin sign in' }).click();
+        await page.getByLabel('Admin email').fill(account.email);
+        await page.getByLabel('Password').fill(account.password);
+        await page.getByRole('button', { name: 'Sign in as admin' }).click();
+    } else {
+        await page.getByRole('button', { name: 'Log in' }).click();
+        await page.getByLabel('Email').fill(account.email);
+        await page.getByLabel('Password').fill(account.password);
+        await page.locator('#auth-submit-btn').click();
+    }
     await expect(page.getByRole('heading', { name: new RegExp(`Welcome back,\\s*${account.name.split(' ')[0]}`, 'i') })).toBeVisible();
 }
 
@@ -112,6 +120,10 @@ test('home and account entry pages have no automatically detectable accessibilit
 
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expectAccessible(page);
+    await page.getByRole('button', { name: 'Admin sign in' }).click();
+    await expect(page.getByRole('heading', { name: 'Admin sign in' })).toBeVisible();
+    await expectAccessible(page);
+    await page.getByRole('button', { name: 'Back to account sign in' }).click();
 });
 
 test('empty setup, donor/recipient workflow, QR privacy, and admin notice work in the browser', async ({ page }) => {

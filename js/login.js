@@ -42,6 +42,19 @@ const loginApp = {
         }
     },
 
+    async handleAdminAuth(event) {
+        event.preventDefault();
+        const email = document.getElementById('admin-auth-email').value.trim();
+        const password = document.getElementById('admin-auth-password').value;
+        try {
+            await Store.adminLogin(email, password);
+            app.toast('Welcome back, administrator.', 'success');
+            await app.navigate('dashboard');
+        } catch (error) {
+            app.toast(error.message || 'Could not sign in as administrator.', 'error');
+        }
+    },
+
     toggleAuthMode(mode) {
         this.authMode = mode;
         this.hasSelectedMode = true;

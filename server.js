@@ -319,7 +319,7 @@ async function handleApi(request, response, url) {
         broadcast('profiles', 'INSERT');
         return sendJson(response, 201, { user: cleanUser(user) });
     }
-    if (method === 'POST' && pathname === '/api/login') {
+    if (method === 'POST' && ['/api/login', '/api/admin/login'].includes(pathname)) {
         authRateLimit(request);
         const body = await readBody(request);
         const email = normalizeEmail(requiredText(body.email, 'Email', 254));
@@ -331,6 +331,9 @@ async function handleApi(request, response, url) {
         }
         const verified = await hashPassword(password, Buffer.from(user.passwordSalt, 'hex'));
         if (!crypto.timingSafeEqual(Buffer.from(verified.hash, 'hex'), Buffer.from(user.passwordHash, 'hex'))) {
+            throw Object.assign(new Error('Email or password is incorrect.'), { status: 401 });
+        }
+        if (pathname === '/api/admin/login' && user.userType !== 'admin') {
             throw Object.assign(new Error('Email or password is incorrect.'), { status: 401 });
         }
         setSession(response, user);
