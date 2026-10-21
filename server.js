@@ -17,6 +17,7 @@ const BOOTSTRAP_ADMIN_NAME = process.env.BOOTSTRAP_ADMIN_NAME?.trim();
 const sessions = new Map();
 const eventClients = new Set();
 const authAttempts = new Map();
+let adminRegistrationInProgress = false;
 const MAX_BODY_BYTES = 64 * 1024;
 const SECURITY_HEADERS = {
     'X-Content-Type-Options': 'nosniff',
@@ -267,6 +268,56 @@ async function handleApi(request, response, url) {
     if (method === 'GET' && pathname === '/api/status') {
         return sendJson(response, 200, { adminSetupRequired: !data.users.some(user => user.userType === 'admin') });
     }
+    if (method === 'POST' && pathname === '/api/admin/register') {
+        authRateLimit(request);
+        const body = await readBody(request);
+        if (adminRegistrationInProgress || data.users.some(user => user.userType === 'admin')) {
+            throw Object.assign(new Error('The first administrator has already been created. Use admin sign in.'), { status: 409 });
+        }
+        const email = normalizeEmail(requiredText(body.email, 'Email', 254));
+        const password = requiredText(body.password, 'Password', 256);
+        const name = requiredText(body.name, 'Full name', 100);
+        const phone = requiredText(body.phone, 'Phone number', 30);
+        const location = requiredText(body.location, 'Campus location', 120);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw Object.assign(new Error('Enter a valid email address.'), { status: 400 });
+        if (password.length < 8) throw Object.assign(new Error('Password must contain at least 8 characters.'), { status: 400 });
+        if (data.users.some(user => typeof user.email === 'string' && normalizeEmail(user.email) === email)) {
+            throw Object.assign(new Error('An account with this email already exists.'), { status: 409 });
+        }
+        const providedCode = Buffer.from(String(body.adminSetupCode || ''));
+        const expectedCode = Buffer.from(ADMIN_SETUP_CODE);
+        if (providedCode.length !== expectedCode.length || !crypto.timingSafeEqual(providedCode, expectedCode)) {
+            throw Object.assign(new Error('The admin setup code is incorrect.'), { status: 403 });
+        }
+        adminRegistrationInProgress = true;
+        try {
+            const passwordData = await hashPassword(password);
+            const user = {
+                id: crypto.randomUUID(),
+                name,
+                email,
+                phone,
+                location,
+                bloodGroup: null,
+                userType: 'admin',
+                isAvailable: false,
+                sharePhone: false,
+                qrSharePhone: false,
+                lastDonationDate: null,
+                reminderDate: null,
+                passwordSalt: passwordData.salt,
+                passwordHash: passwordData.hash,
+                createdAt: new Date().toISOString()
+            };
+            data.users.push(user);
+            writeData(data);
+            setSession(response, user);
+            broadcast('profiles', 'INSERT');
+            return sendJson(response, 201, { user: cleanUser(user) });
+        } finally {
+            adminRegistrationInProgress = false;
+        }
+    }
     if (method === 'POST' && pathname === '/api/register') {
         authRateLimit(request);
         const body = await readBody(request);
@@ -282,15 +333,7 @@ async function handleApi(request, response, url) {
             throw Object.assign(new Error('An account with this email already exists.'), { status: 409 });
         }
 
-        let userType = body.userType;
-        if (body.adminSetupCode && !data.users.some(user => user.userType === 'admin')) {
-            const providedCode = Buffer.from(String(body.adminSetupCode));
-            const expectedCode = Buffer.from(ADMIN_SETUP_CODE);
-            if (providedCode.length !== expectedCode.length || !crypto.timingSafeEqual(providedCode, expectedCode)) {
-                throw Object.assign(new Error('The admin setup code is incorrect.'), { status: 403 });
-            }
-            userType = 'admin';
-        }
+        const userType = body.userType;
         const bloodGroup = body.bloodGroup || null;
         if (userType === 'donor' && !['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].includes(bloodGroup)) {
             throw Object.assign(new Error('Select a valid blood group.'), { status: 400 });

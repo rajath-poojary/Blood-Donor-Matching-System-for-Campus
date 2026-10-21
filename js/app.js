@@ -121,11 +121,6 @@ const Views = {
                             <select id="auth-blood-group" class="form-select"><option value="">Select group</option>${groupOptions('')}</select></div>
                         <label class="check-row" id="auth-share-row"><input type="checkbox" id="auth-share-phone"> Let signed-in campus users see my phone in the donor directory</label>
                     </div>
-                    <div class="form-group mt-2" id="auth-admin-setup" hidden>
-                        <label class="form-label" for="auth-admin-code">First-time admin setup code</label>
-                        <input id="auth-admin-code" class="form-input" type="password" autocomplete="off" placeholder="Enter the code shown in the server terminal">
-                        <p class="text-sm mt-1">Only shown before the first admin account is created.</p>
-                    </div>
                     <div class="form-group mt-2"><label class="form-label" for="auth-email">Email</label><input id="auth-email" class="form-input" type="email" required autocomplete="email"></div>
                     <div class="form-group"><label class="form-label" for="auth-password">Password</label><input id="auth-password" class="form-input" type="password" minlength="8" required autocomplete="current-password"></div>
                     <button type="submit" class="btn btn-primary w-full" id="auth-submit-btn">Log in</button>
@@ -135,26 +130,47 @@ const Views = {
             </div>
         </section>`,
 
-    'admin-login': () => `
-        <section class="view narrow admin-login-view">
-            <div class="card glass admin-login-card">
-                <p class="eyebrow">ADMINISTRATOR ACCESS</p>
-                <h1 class="auth-heading">Admin sign in</h1>
-                <p class="text-sm mb-3">Use the administrator email and password created for this server.</p>
-                <form id="admin-auth-form" onsubmit="loginApp.handleAdminAuth(event)">
-                    <div class="form-group">
-                        <label class="form-label" for="admin-auth-email">Admin email</label>
-                        <input id="admin-auth-email" class="form-input" type="email" required autocomplete="username">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="admin-auth-password">Password</label>
-                        <input id="admin-auth-password" class="form-input" type="password" required autocomplete="current-password">
-                    </div>
-                    <button type="submit" class="btn btn-primary w-full" id="admin-auth-submit">Sign in as admin</button>
+    'admin-login': async () => {
+        const { adminSetupRequired } = await Store.getServerStatus();
+        const firstAdminForm = adminSetupRequired ? `
+            <div class="admin-first-setup">
+                <p class="eyebrow">FIRST-TIME SETUP</p>
+                <h2>Create the first administrator</h2>
+                <p class="text-sm mt-1 mb-2">Enter the one-time code printed in the server logs. This is only available before an admin account exists.</p>
+                <form id="admin-register-form" onsubmit="loginApp.handleAdminRegister(event)">
+                    <div class="form-group"><label class="form-label" for="admin-register-name">Full name</label><input id="admin-register-name" class="form-input" required maxlength="100" autocomplete="name"></div>
+                    <div class="form-group"><label class="form-label" for="admin-register-phone">Phone number</label><input id="admin-register-phone" class="form-input" type="tel" required maxlength="30" autocomplete="tel"></div>
+                    <div class="form-group"><label class="form-label" for="admin-register-location">Campus location</label><input id="admin-register-location" class="form-input" required maxlength="120"></div>
+                    <div class="form-group"><label class="form-label" for="admin-register-email">Admin email</label><input id="admin-register-email" class="form-input" type="email" required maxlength="254" autocomplete="email"></div>
+                    <div class="form-group"><label class="form-label" for="admin-register-password">Create password</label><input id="admin-register-password" class="form-input" type="password" required minlength="8" maxlength="256" autocomplete="new-password"></div>
+                    <div class="form-group"><label class="form-label" for="admin-register-code">First-time admin setup code</label><input id="admin-register-code" class="form-input" type="password" required autocomplete="off" placeholder="Enter the code from server logs"></div>
+                    <button type="submit" class="btn btn-primary w-full" id="admin-register-submit">Create first admin account</button>
                 </form>
-                <button class="btn btn-secondary w-full mt-2" type="button" onclick="app.navigate('login')">Back to account sign in</button>
             </div>
-        </section>`,
+            <div class="admin-login-divider"><span>Already created the first admin?</span></div>` : '';
+        return `
+            <section class="view narrow admin-login-view">
+                <div class="card glass admin-login-card">
+                    <p class="eyebrow">ADMINISTRATOR ACCESS</p>
+                    <h1 class="auth-heading">${adminSetupRequired ? 'First admin setup' : 'Admin sign in'}</h1>
+                    ${firstAdminForm}
+                    <h2 class="admin-login-subheading">${adminSetupRequired ? 'Admin sign in' : 'Sign in to admin'}</h2>
+                    <p class="text-sm mb-3">Use the administrator email and password created for this server.</p>
+                    <form id="admin-auth-form" onsubmit="loginApp.handleAdminAuth(event)">
+                        <div class="form-group">
+                            <label class="form-label" for="admin-auth-email">Admin email</label>
+                            <input id="admin-auth-email" class="form-input" type="email" required autocomplete="username">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="admin-auth-password">Password</label>
+                            <input id="admin-auth-password" class="form-input" type="password" required autocomplete="current-password">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full" id="admin-auth-submit">Sign in as admin</button>
+                    </form>
+                    <button class="btn btn-secondary w-full mt-2" type="button" onclick="app.navigate('login')">Back to account sign in</button>
+                </div>
+            </section>`;
+    },
 
     dashboard: async () => {
         const user = Store.getCurrentUser();
@@ -349,12 +365,6 @@ const app = {
         if (route === 'login') {
             loginApp.toggleAuthMode('login');
             loginApp.updateRoleUI();
-            try {
-                const { adminSetupRequired } = await Store.getServerStatus();
-                document.getElementById('auth-admin-setup').hidden = !adminSetupRequired;
-            } catch (error) {
-                console.error('Could not check first-time admin setup:', error);
-            }
         }
         if (route === 'home' && Store.isConfigured()) this.loadHomeUpdates();
         this.updateNav();

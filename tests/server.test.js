@@ -52,7 +52,8 @@ async function api(route, { method = 'GET', body, cookie } = {}) {
 }
 
 async function register(user) {
-    const { response, payload } = await api('/register', { method: 'POST', body: user });
+    const route = user.adminSetupCode ? '/admin/register' : '/register';
+    const { response, payload } = await api(route, { method: 'POST', body: user });
     assert.equal(response.status, 201, payload.error);
     return {
         user: payload.user,
@@ -82,6 +83,15 @@ after(async () => {
 test('fresh server has no seeded data, protects local files, and rejects cross-origin writes', async () => {
     const status = await api('/status');
     assert.deepEqual(status.payload, { adminSetupRequired: true });
+    const invalidAdminSetup = await api('/admin/register', {
+        method: 'POST',
+        body: {
+            name: 'Invalid Admin', email: `invalid-admin-${runId}@example.test`, password: testPassword,
+            phone: '0000000000', location: 'Test campus', adminSetupCode: 'incorrect-code'
+        }
+    });
+    assert.equal(invalidAdminSetup.response.status, 403);
+    assert.equal((await api('/status')).payload.adminSetupRequired, true);
     assert.equal((await api('/session')).payload, null);
     assert.equal((await api('/requests')).response.status, 401);
     assert.equal((await api('/notices')).response.status, 200);
@@ -125,10 +135,28 @@ test('fresh server has no seeded data, protects local files, and rejects cross-o
 test('auth, donor response review, request lifecycle, analytics, and isolated demo reset', async () => {
     const admin = await register({
         name: `Administrator ${runId}`, email: `admin-${runId}@example.test`, password: testPassword,
-        phone: runDigits.slice(0, 10), location: `Test campus ${runId}`, userType: 'donor', bloodGroup: 'O-',
+        phone: runDigits.slice(0, 10), location: `Test campus ${runId}`, userType: 'admin',
         adminSetupCode
     });
     assert.equal(admin.user.userType, 'admin');
+    assert.equal((await api('/status')).payload.adminSetupRequired, false);
+    const secondAdmin = await api('/admin/register', {
+        method: 'POST',
+        body: {
+            name: 'Unexpected second admin', email: `second-admin-${runId}@example.test`,
+            password: testPassword, phone: '0000000000', location: 'Test campus', adminSetupCode
+        }
+    });
+    assert.equal(secondAdmin.response.status, 409);
+    const publicAdminAttempt = await api('/register', {
+        method: 'POST',
+        body: {
+            name: 'Public admin attempt', email: `public-admin-${runId}@example.test`,
+            password: testPassword, phone: '0000000000', location: 'Test campus',
+            userType: 'admin', adminSetupCode
+        }
+    });
+    assert.equal(publicAdminAttempt.response.status, 400);
 
     const donor = await register({
         name: `Donor ${runId}`, email: `donor-${runId}@example.test`, password: `${testPassword}-donor`,

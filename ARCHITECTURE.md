@@ -19,7 +19,7 @@ Node.js (server.js)
 
 ## Main data flows
 
-- **Registration and sign-in:** `js/login.js` submits credentials through `js/store.js`; the server validates credentials and role permissions and keeps the session in an HTTP-only cookie. Administrator sign-in uses a separate page and server-enforced admin-only login route. A first administrator may also be provisioned from private `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` environment variables; the password is stored as a salted hash.
+- **Registration and sign-in:** `js/login.js` submits credentials through `js/store.js`; the server validates credentials and role permissions and keeps the session in an HTTP-only cookie. Administrator sign-in uses a separate page and server-enforced admin-only login route. The first admin can register there using the one-time setup code; alternatively, a server may provision the first administrator from private `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` environment variables. Passwords are stored as salted hashes.
 - **Requests and donor offers:** the recipient creates a request; the server determines compatible available donors for display; donors submit offers; only the requester can accept or decline an offer and close their request.
 - **Admin operations:** admin-only API routes serve network analytics, notices, request moderation, and explicitly entered demo requests. Public homepage notices may link to active requests; donor volunteers are submitted as offers by the signed-in donor. Demo cleanup only removes records labeled as demo data and their linked notices.
 - **Live updates:** the browser subscribes to server-sent events. Events trigger a dashboard refresh rather than replacing the server as the source of truth.

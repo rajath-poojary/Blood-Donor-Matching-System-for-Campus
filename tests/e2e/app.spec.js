@@ -64,8 +64,16 @@ test.afterAll(async () => {
 async function registerFromHome(page, account) {
     if (account.userType === 'admin') {
         await page.getByRole('button', { name: 'Sign in' }).click();
-        await page.getByRole('button', { name: 'Register' }).click();
-        await page.getByRole('button', { name: 'Donor', exact: true }).click();
+        await page.getByRole('button', { name: 'Admin sign in' }).click();
+        await page.getByLabel('Full name').fill(account.name);
+        await page.getByLabel('Phone number').fill(account.phone);
+        await page.getByLabel('Campus location').fill(account.location);
+        await page.locator('#admin-register-email').fill(account.email);
+        await page.locator('#admin-register-password').fill(account.password);
+        await page.getByLabel('First-time admin setup code').fill(adminSetupCode);
+        await page.getByRole('button', { name: 'Create first admin account' }).click();
+        await expect(page.getByRole('heading', { name: new RegExp(`Welcome back,\\s*${account.name.split(' ')[0]}`, 'i') })).toBeVisible();
+        return;
     } else {
         const action = account.userType === 'donor' ? /Join as a donor/ : /Open a request/;
         await page.getByRole('button', { name: action }).click();
@@ -75,9 +83,6 @@ async function registerFromHome(page, account) {
     await page.getByLabel('Phone number').fill(account.phone);
     await page.getByLabel('Campus location / dorm').fill(account.location);
     if (account.userType !== 'recipient') await page.getByLabel('Your blood group').selectOption(account.bloodGroup);
-    if (account.userType === 'admin') {
-        await page.getByLabel('First-time admin setup code').fill(adminSetupCode);
-    }
     await page.getByLabel('Email').fill(account.email);
     await page.getByLabel('Password').fill(account.password);
     await page.locator('#auth-submit-btn').click();
