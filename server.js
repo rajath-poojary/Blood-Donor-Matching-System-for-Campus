@@ -205,7 +205,10 @@ async function handleApi(request, response, url) {
         } catch {
             throw Object.assign(new Error('Cross-origin requests are not allowed.'), { status: 403 });
         }
-        if (parsedOrigin.origin !== `http://${request.headers.host || ''}`) {
+        const forwardedProtocol = request.headers['x-forwarded-proto']?.split(',')[0].trim().toLowerCase();
+        const protocol = request.socket.encrypted || forwardedProtocol === 'https' ? 'https' : 'http';
+        const expectedOrigin = new URL(`${protocol}://${request.headers.host || ''}`).origin;
+        if (parsedOrigin.origin !== expectedOrigin) {
             throw Object.assign(new Error('Cross-origin requests are not allowed.'), { status: 403 });
         }
     }

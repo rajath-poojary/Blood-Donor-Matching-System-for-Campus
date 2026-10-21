@@ -98,6 +98,17 @@ test('fresh server has no seeded data, protects local files, and rejects cross-o
     const nullBody = await api('/register', { method: 'POST', body: null });
     assert.equal(nullBody.response.status, 400);
     assert.equal(nullBody.payload.error, 'Request body must be a JSON object.');
+    const httpsOrigin = await fetch(`${baseUrl}/api/register`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Origin: baseUrl.replace('http://', 'https://'),
+            'X-Forwarded-Proto': 'https'
+        },
+        body: JSON.stringify(null)
+    });
+    assert.equal(httpsOrigin.status, 400);
+    assert.equal((await httpsOrigin.json()).error, 'Request body must be a JSON object.');
     const crossOriginWrite = await fetch(`${baseUrl}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Origin: 'https://untrusted.example' },
