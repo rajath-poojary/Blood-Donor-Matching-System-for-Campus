@@ -9,7 +9,9 @@ const { createServer } = require('node:net');
 
 const projectRoot = path.resolve(__dirname, '../..');
 const runId = randomUUID();
-const adminSetupCode = randomUUID();
+const adminEmail = `admin-${runId}@example.test`;
+const adminPassword = randomUUID();
+const adminName = `Administrator ${runId}`;
 let temporaryDirectory;
 let serverProcess;
 let baseUrl;
@@ -46,7 +48,9 @@ test.beforeAll(async () => {
             ...process.env,
             PORT: String(port),
             BLOODMATCH_DATA_FILE: path.join(temporaryDirectory, 'local-data.json'),
-            ADMIN_SETUP_CODE: adminSetupCode
+            BOOTSTRAP_ADMIN_EMAIL: adminEmail,
+            BOOTSTRAP_ADMIN_PASSWORD: adminPassword,
+            BOOTSTRAP_ADMIN_NAME: adminName
         },
         stdio: 'ignore'
     });
@@ -62,22 +66,8 @@ test.afterAll(async () => {
 });
 
 async function registerFromHome(page, account) {
-    if (account.userType === 'admin') {
-        await page.getByRole('button', { name: 'Sign in' }).click();
-        await page.getByRole('button', { name: 'Admin sign in' }).click();
-        await page.getByLabel('Full name').fill(account.name);
-        await page.getByLabel('Phone number').fill(account.phone);
-        await page.getByLabel('Campus location').fill(account.location);
-        await page.locator('#admin-register-email').fill(account.email);
-        await page.locator('#admin-register-password').fill(account.password);
-        await page.getByLabel('First-time admin setup code').fill(adminSetupCode);
-        await page.getByRole('button', { name: 'Create first admin account' }).click();
-        await expect(page.getByRole('heading', { name: new RegExp(`Welcome back,\\s*${account.name.split(' ')[0]}`, 'i') })).toBeVisible();
-        return;
-    } else {
-        const action = account.userType === 'donor' ? /Join as a donor/ : /Open a request/;
-        await page.getByRole('button', { name: action }).click();
-    }
+    const action = account.userType === 'donor' ? /Join as a donor/ : /Open a request/;
+    await page.getByRole('button', { name: action }).click();
 
     await page.getByLabel('Full name').fill(account.name);
     await page.getByLabel('Phone number').fill(account.phone);
@@ -131,12 +121,12 @@ test('home and account entry pages have no automatically detectable accessibilit
     await page.getByRole('button', { name: 'Back to account sign in' }).click();
 });
 
-test('empty setup, donor/recipient workflow, QR privacy, and admin notice work in the browser', async ({ page }) => {
+test('private admin bootstrap, donor/recipient workflow, QR privacy, and admin notice work in the browser', async ({ page }) => {
     const admin = {
         userType: 'admin',
-        name: `Administrator ${runId}`,
-        email: `admin-${runId}@example.test`,
-        password: randomUUID(),
+        name: adminName,
+        email: adminEmail,
+        password: adminPassword,
         phone: `admin-${runId}`,
         location: `Test campus ${runId}`,
         bloodGroup: 'O+'
@@ -162,9 +152,9 @@ test('empty setup, donor/recipient workflow, QR privacy, and admin notice work i
     await page.goto(baseUrl);
     const initialStatus = await page.request.get(`${baseUrl}/api/status`);
     await expect(initialStatus).toBeOK();
-    expect(await initialStatus.json()).toEqual({ adminSetupRequired: true });
+    expect(await initialStatus.json()).toEqual({ adminSetupRequired: false });
 
-    await registerFromHome(page, admin);
+    await loginFromHome(page, admin);
     await expectAccessible(page);
     await logoutToHome(page);
     await registerFromHome(page, recipient);

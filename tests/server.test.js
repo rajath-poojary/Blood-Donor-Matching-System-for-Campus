@@ -11,8 +11,9 @@ const projectRoot = path.resolve(__dirname, '..');
 const tempDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'bloodmatch-test-'));
 const dataFile = path.join(tempDirectory, 'local-data.json');
 const runId = randomUUID();
-const adminSetupCode = randomUUID();
 const testPassword = randomUUID();
+const testAdminEmail = `admin-${runId}@example.test`;
+const testAdminPassword = `${testPassword}-admin`;
 const runDigits = runId.replace(/-/g, '');
 let serverProcess;
 let baseUrl;
@@ -52,8 +53,7 @@ async function api(route, { method = 'GET', body, cookie } = {}) {
 }
 
 async function register(user) {
-    const route = user.adminSetupCode ? '/admin/register' : '/register';
-    const { response, payload } = await api(route, { method: 'POST', body: user });
+    const { response, payload } = await api('/register', { method: 'POST', body: user });
     assert.equal(response.status, 201, payload.error);
     return {
         user: payload.user,
@@ -66,7 +66,14 @@ before(async () => {
     baseUrl = `http://127.0.0.1:${port}`;
     serverProcess = spawn(process.execPath, [path.join(projectRoot, 'server.js')], {
         cwd: projectRoot,
-        env: { ...process.env, PORT: String(port), BLOODMATCH_DATA_FILE: dataFile, ADMIN_SETUP_CODE: adminSetupCode },
+        env: {
+            ...process.env,
+            PORT: String(port),
+            BLOODMATCH_DATA_FILE: dataFile,
+            BOOTSTRAP_ADMIN_EMAIL: testAdminEmail,
+            BOOTSTRAP_ADMIN_PASSWORD: testAdminPassword,
+            BOOTSTRAP_ADMIN_NAME: `Administrator ${runId}`
+        },
         stdio: 'ignore'
     });
     await waitForServer();
@@ -80,18 +87,25 @@ after(async () => {
     fs.rmSync(tempDirectory, { recursive: true, force: true });
 });
 
-test('fresh server has no seeded data, protects local files, and rejects cross-origin writes', async () => {
+test('server bootstraps admin privately, protects local files, and rejects public admin registration', async () => {
     const status = await api('/status');
-    assert.deepEqual(status.payload, { adminSetupRequired: true });
-    const invalidAdminSetup = await api('/admin/register', {
+    assert.deepEqual(status.payload, { adminSetupRequired: false });
+    const publicAdminRoute = await api('/admin/register', {
         method: 'POST',
         body: {
-            name: 'Invalid Admin', email: `invalid-admin-${runId}@example.test`, password: testPassword,
-            phone: '0000000000', location: 'Test campus', adminSetupCode: 'incorrect-code'
+            name: 'Public Admin Attempt', email: `public-admin-${runId}@example.test`, password: testPassword,
+            phone: '0000000000', location: 'Test campus'
         }
     });
-    assert.equal(invalidAdminSetup.response.status, 403);
-    assert.equal((await api('/status')).payload.adminSetupRequired, true);
+    assert.equal(publicAdminRoute.response.status, 401);
+    const publicAdminRoleAttempt = await api('/register', {
+        method: 'POST',
+        body: {
+            name: 'Public Admin Attempt', email: `public-role-${runId}@example.test`, password: testPassword,
+            phone: '0000000000', location: 'Test campus', userType: 'admin'
+        }
+    });
+    assert.equal(publicAdminRoleAttempt.response.status, 400);
     assert.equal((await api('/session')).payload, null);
     assert.equal((await api('/requests')).response.status, 401);
     assert.equal((await api('/notices')).response.status, 200);
@@ -129,31 +143,27 @@ test('fresh server has no seeded data, protects local files, and rejects cross-o
         })
     });
     assert.equal(crossOriginWrite.status, 403);
-    assert.equal((await api('/status')).payload.adminSetupRequired, true);
+    assert.equal((await api('/status')).payload.adminSetupRequired, false);
 });
 
 test('auth, donor response review, request lifecycle, analytics, and isolated demo reset', async () => {
-    const admin = await register({
-        name: `Administrator ${runId}`, email: `admin-${runId}@example.test`, password: testPassword,
-        phone: runDigits.slice(0, 10), location: `Test campus ${runId}`, userType: 'admin',
-        adminSetupCode
+    const adminLogin = await api('/admin/login', {
+        method: 'POST',
+        body: { email: testAdminEmail, password: testAdminPassword }
     });
+    assert.equal(adminLogin.response.status, 200, adminLogin.payload.error);
+    const admin = {
+        user: adminLogin.payload.user,
+        cookie: adminLogin.response.headers.get('set-cookie').split(';', 1)[0]
+    };
     assert.equal(admin.user.userType, 'admin');
     assert.equal((await api('/status')).payload.adminSetupRequired, false);
-    const secondAdmin = await api('/admin/register', {
-        method: 'POST',
-        body: {
-            name: 'Unexpected second admin', email: `second-admin-${runId}@example.test`,
-            password: testPassword, phone: '0000000000', location: 'Test campus', adminSetupCode
-        }
-    });
-    assert.equal(secondAdmin.response.status, 409);
     const publicAdminAttempt = await api('/register', {
         method: 'POST',
         body: {
             name: 'Public admin attempt', email: `public-admin-${runId}@example.test`,
             password: testPassword, phone: '0000000000', location: 'Test campus',
-            userType: 'admin', adminSetupCode
+            userType: 'admin'
         }
     });
     assert.equal(publicAdminAttempt.response.status, 400);
@@ -168,13 +178,13 @@ test('auth, donor response review, request lifecycle, analytics, and isolated de
     });
     assert.equal(deniedAdminLogin.response.status, 401);
     assert.equal(deniedAdminLogin.response.headers.get('set-cookie'), null);
-    const adminLogin = await api('/admin/login', {
+    const signedInAdmin = await api('/admin/login', {
         method: 'POST',
-        body: { email: admin.user.email, password: testPassword }
+        body: { email: admin.user.email, password: testAdminPassword }
     });
-    assert.equal(adminLogin.response.status, 200, adminLogin.payload.error);
-    assert.equal(adminLogin.payload.user.userType, 'admin');
-    assert.ok(adminLogin.response.headers.get('set-cookie'));
+    assert.equal(signedInAdmin.response.status, 200, signedInAdmin.payload.error);
+    assert.equal(signedInAdmin.payload.user.userType, 'admin');
+    assert.ok(signedInAdmin.response.headers.get('set-cookie'));
 
     const savedData = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
     savedData.users.find(item => item.id === donor.user.id).email = ` ${donor.user.email.toUpperCase()} `;

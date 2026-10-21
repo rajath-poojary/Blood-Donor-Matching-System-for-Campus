@@ -55,25 +55,6 @@ const loginApp = {
         }
     },
 
-    async handleAdminRegister(event) {
-        event.preventDefault();
-        try {
-            const result = await Store.registerAdmin({
-                name: document.getElementById('admin-register-name').value.trim(),
-                phone: document.getElementById('admin-register-phone').value.trim(),
-                location: document.getElementById('admin-register-location').value.trim(),
-                email: document.getElementById('admin-register-email').value.trim(),
-                password: document.getElementById('admin-register-password').value,
-                adminSetupCode: document.getElementById('admin-register-code').value.trim()
-            });
-            if (result.user.userType !== 'admin') throw new Error('The server did not create an administrator account.');
-            app.toast('First administrator account created.', 'success');
-            await app.navigate('dashboard');
-        } catch (error) {
-            app.toast(error.message || 'Could not create the first administrator.', 'error');
-        }
-    },
-
     toggleAuthMode(mode) {
         this.authMode = mode;
         this.hasSelectedMode = true;

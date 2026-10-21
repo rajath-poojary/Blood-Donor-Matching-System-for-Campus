@@ -132,29 +132,15 @@ const Views = {
 
     'admin-login': async () => {
         const { adminSetupRequired } = await Store.getServerStatus();
-        const firstAdminForm = adminSetupRequired ? `
-            <div class="admin-first-setup">
-                <p class="eyebrow">FIRST-TIME SETUP</p>
-                <h2>Create the first administrator</h2>
-                <p class="text-sm mt-1 mb-2">Enter the one-time code printed in the server logs. This is only available before an admin account exists.</p>
-                <form id="admin-register-form" onsubmit="loginApp.handleAdminRegister(event)">
-                    <div class="form-group"><label class="form-label" for="admin-register-name">Full name</label><input id="admin-register-name" class="form-input" required maxlength="100" autocomplete="name"></div>
-                    <div class="form-group"><label class="form-label" for="admin-register-phone">Phone number</label><input id="admin-register-phone" class="form-input" type="tel" required maxlength="30" autocomplete="tel"></div>
-                    <div class="form-group"><label class="form-label" for="admin-register-location">Campus location</label><input id="admin-register-location" class="form-input" required maxlength="120"></div>
-                    <div class="form-group"><label class="form-label" for="admin-register-email">Admin email</label><input id="admin-register-email" class="form-input" type="email" required maxlength="254" autocomplete="email"></div>
-                    <div class="form-group"><label class="form-label" for="admin-register-password">Create password</label><input id="admin-register-password" class="form-input" type="password" required minlength="8" maxlength="256" autocomplete="new-password"></div>
-                    <div class="form-group"><label class="form-label" for="admin-register-code">First-time admin setup code</label><input id="admin-register-code" class="form-input" type="password" required autocomplete="off" placeholder="Enter the code from server logs"></div>
-                    <button type="submit" class="btn btn-primary w-full" id="admin-register-submit">Create first admin account</button>
-                </form>
-            </div>
-            <div class="admin-login-divider"><span>Already created the first admin?</span></div>` : '';
+        const setupMessage = adminSetupRequired
+            ? '<p class="notice admin-setup-message"><strong>First admin not configured.</strong> The server owner must set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD in the private server environment, then restart the server.</p>'
+            : '';
         return `
             <section class="view narrow admin-login-view">
                 <div class="card glass admin-login-card">
                     <p class="eyebrow">ADMINISTRATOR ACCESS</p>
-                    <h1 class="auth-heading">${adminSetupRequired ? 'First admin setup' : 'Admin sign in'}</h1>
-                    ${firstAdminForm}
-                    <h2 class="admin-login-subheading">${adminSetupRequired ? 'Admin sign in' : 'Sign in to admin'}</h2>
+                    <h1 class="auth-heading">Admin sign in</h1>
+                    ${setupMessage}
                     <p class="text-sm mb-3">Use the administrator email and password created for this server.</p>
                     <form id="admin-auth-form" onsubmit="loginApp.handleAdminAuth(event)">
                         <div class="form-group">

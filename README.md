@@ -8,13 +8,13 @@ A local-first blood donor matching portfolio project. Donors and recipients ente
 2. Run `npm start` from this folder, or double-click [`Start BloodMatch.bat`](./Start%20BloodMatch.bat).
 3. Open [http://127.0.0.1:5502](http://127.0.0.1:5502).
 
-The app stores its local data in the ignored `local-data.json` file. For a new database, the server prints a one-time admin setup code in the terminal. The current machine’s existing database is not changed by running the automated tests.
+The app stores its local data in the ignored `local-data.json` file. The first administrator is configured through private server environment variables; public admin registration and setup codes are disabled. See [LOCAL_SETUP.md](./LOCAL_SETUP.md) for details.
 
 ## Features
 
 - A mission-control interface with data-driven overview cards and a per-request timeline from opening through donor offers and closure.
 - Donor and recipient registration, sign-in, editable profiles, and donor availability.
-- Separate administrator sign-in page with a one-time first-admin registration flow and server-enforced admin-only authentication.
+- Separate administrator sign-in page with server-enforced admin-only authentication; the first admin is provisioned through private server environment variables.
 - Recipient blood requests, compatible donor matching, donor offers, and recipient accept/decline decisions.
 - Requesters can mark requests fulfilled or cancelled; administrators can cancel active requests.
 - Public homepage campus broadcasts that can link to an active request; eligible signed-in donors can volunteer directly from the notice.
@@ -44,6 +44,7 @@ Keyboard users can skip directly to the main content, use the labeled mobile nav
 - `playwright.config.js` — headless Chromium test configuration.
 - `.github/workflows/ci.yml` — automated test workflow.
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — data flow, boundaries, and design notes.
+- [`PROJECT_OVERVIEW.md`](./PROJECT_OVERVIEW.md) — full explanation of roles, features, workflows, hosting, setup, and limitations.
 - [`PORTFOLIO_GUIDE.md`](./PORTFOLIO_GUIDE.md) — safe walkthrough and interview-ready project summary.
 
 ## Scope and safety

@@ -45,16 +45,6 @@ const Store = {
         return result;
     },
 
-    async registerAdmin(admin) {
-        const result = await this.request('/admin/register', {
-            method: 'POST',
-            body: JSON.stringify(admin)
-        });
-        this.currentUser = result.user;
-        if (this.currentUser) app.startRealtime();
-        return result;
-    },
-
     async login(email, password) {
         const result = await this.request('/login', {
             method: 'POST',

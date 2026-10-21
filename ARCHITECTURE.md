@@ -2,7 +2,7 @@
 
 ## Runtime shape
 
-Campus Blood Match is a same-origin browser app backed by a small Node.js HTTP server. The server binds to `127.0.0.1`; user-entered records are stored in the ignored `local-data.json` file. The app does not seed accounts, requests, notices, or demo records. Domain options such as blood groups and request statuses are code-defined enums; they are not stored user records.
+Campus Blood Match is a same-origin browser app backed by a small Node.js HTTP server. The server binds to `0.0.0.0` for local and hosted runtime compatibility; user-entered records are stored in the ignored `local-data.json` file unless `BLOODMATCH_DATA_FILE` is configured. The app does not seed accounts, requests, notices, or demo records. Domain options such as blood groups and request statuses are code-defined enums; they are not stored user records.
 
 ```text
 Browser (index.html)
@@ -19,7 +19,7 @@ Node.js (server.js)
 
 ## Main data flows
 
-- **Registration and sign-in:** `js/login.js` submits credentials through `js/store.js`; the server validates credentials and role permissions and keeps the session in an HTTP-only cookie. Administrator sign-in uses a separate page and server-enforced admin-only login route. The first admin can register there using the one-time setup code; alternatively, a server may provision the first administrator from private `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` environment variables. Passwords are stored as salted hashes.
+- **Registration and sign-in:** `js/login.js` submits credentials through `js/store.js`; the server validates credentials and role permissions and keeps the session in an HTTP-only cookie. Administrator sign-in uses a separate page and server-enforced admin-only login route. The first administrator is provisioned only from private `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` server environment variables; public admin registration is disabled. Passwords are stored as salted hashes.
 - **Requests and donor offers:** the recipient creates a request; the server determines compatible available donors for display; donors submit offers; only the requester can accept or decline an offer and close their request.
 - **Admin operations:** admin-only API routes serve network analytics, notices, request moderation, and explicitly entered demo requests. Public homepage notices may link to active requests; donor volunteers are submitted as offers by the signed-in donor. Demo cleanup only removes records labeled as demo data and their linked notices.
 - **Live updates:** the browser subscribes to server-sent events. Events trigger a dashboard refresh rather than replacing the server as the source of truth.

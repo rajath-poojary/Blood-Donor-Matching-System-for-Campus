@@ -20,9 +20,7 @@ Install the locked development dependencies with `npm ci`, then install Chromium
 
 ## First administrator
 
-On a new database, the server prints a random one-time first-admin setup code in its terminal. Keep it private. Open **Log in → Admin sign in** to create the first admin using that code, an email, and a password. The admin registration form appears only until the first administrator is created; after that, the page shows admin sign-in only. Other users register as donors or recipients.
-
-For a hosted deployment, you can instead set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` as private service environment variables before starting the service. The server creates the first admin with those credentials only when the database has no admin; the password is stored as a salted hash. Optionally set `BOOTSTRAP_ADMIN_NAME` for the display name. Never commit these values to source code. On Render, add them under your web service's **Environment** settings, then redeploy. Configure a persistent disk for the service's data file so accounts and requests survive restarts; environment-based bootstrap only recreates the initial admin, not other lost data.
+The server does not expose public first-admin registration or print a setup code. To create the first admin, set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` as private environment variables on the server host before starting the service. The server creates the admin only when the database has no admin; passwords are stored as salted hashes. Optionally set `BOOTSTRAP_ADMIN_NAME` for the display name. Never commit these values to source code. On Render, add them under your web service's **Environment** settings, then redeploy. Configure persistent storage for the data file so accounts and requests survive restarts; environment-based bootstrap only recreates the initial admin, not other lost data.
 
 ## Live updates and storage
 

@@ -10,14 +10,12 @@ const SESSION_COOKIE = 'bloodmatch_session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const PASSWORD_SALT_BYTES = 16;
 const PASSWORD_KEY_BYTES = 64;
-const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || crypto.randomBytes(18).toString('base64url');
 const BOOTSTRAP_ADMIN_EMAIL = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim();
 const BOOTSTRAP_ADMIN_PASSWORD = process.env.BOOTSTRAP_ADMIN_PASSWORD;
 const BOOTSTRAP_ADMIN_NAME = process.env.BOOTSTRAP_ADMIN_NAME?.trim();
 const sessions = new Map();
 const eventClients = new Set();
 const authAttempts = new Map();
-let adminRegistrationInProgress = false;
 const MAX_BODY_BYTES = 64 * 1024;
 const SECURITY_HEADERS = {
     'X-Content-Type-Options': 'nosniff',
@@ -267,56 +265,6 @@ async function handleApi(request, response, url) {
     }
     if (method === 'GET' && pathname === '/api/status') {
         return sendJson(response, 200, { adminSetupRequired: !data.users.some(user => user.userType === 'admin') });
-    }
-    if (method === 'POST' && pathname === '/api/admin/register') {
-        authRateLimit(request);
-        const body = await readBody(request);
-        if (adminRegistrationInProgress || data.users.some(user => user.userType === 'admin')) {
-            throw Object.assign(new Error('The first administrator has already been created. Use admin sign in.'), { status: 409 });
-        }
-        const email = normalizeEmail(requiredText(body.email, 'Email', 254));
-        const password = requiredText(body.password, 'Password', 256);
-        const name = requiredText(body.name, 'Full name', 100);
-        const phone = requiredText(body.phone, 'Phone number', 30);
-        const location = requiredText(body.location, 'Campus location', 120);
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw Object.assign(new Error('Enter a valid email address.'), { status: 400 });
-        if (password.length < 8) throw Object.assign(new Error('Password must contain at least 8 characters.'), { status: 400 });
-        if (data.users.some(user => typeof user.email === 'string' && normalizeEmail(user.email) === email)) {
-            throw Object.assign(new Error('An account with this email already exists.'), { status: 409 });
-        }
-        const providedCode = Buffer.from(String(body.adminSetupCode || ''));
-        const expectedCode = Buffer.from(ADMIN_SETUP_CODE);
-        if (providedCode.length !== expectedCode.length || !crypto.timingSafeEqual(providedCode, expectedCode)) {
-            throw Object.assign(new Error('The admin setup code is incorrect.'), { status: 403 });
-        }
-        adminRegistrationInProgress = true;
-        try {
-            const passwordData = await hashPassword(password);
-            const user = {
-                id: crypto.randomUUID(),
-                name,
-                email,
-                phone,
-                location,
-                bloodGroup: null,
-                userType: 'admin',
-                isAvailable: false,
-                sharePhone: false,
-                qrSharePhone: false,
-                lastDonationDate: null,
-                reminderDate: null,
-                passwordSalt: passwordData.salt,
-                passwordHash: passwordData.hash,
-                createdAt: new Date().toISOString()
-            };
-            data.users.push(user);
-            writeData(data);
-            setSession(response, user);
-            broadcast('profiles', 'INSERT');
-            return sendJson(response, 201, { user: cleanUser(user) });
-        } finally {
-            adminRegistrationInProgress = false;
-        }
     }
     if (method === 'POST' && pathname === '/api/register') {
         authRateLimit(request);
@@ -705,8 +653,7 @@ async function startServer() {
     });
     console.log(`Campus Blood Match is running on port ${PORT}`);
     if (!readData().users.some(user => user.userType === 'admin')) {
-        console.log(`One-time first-admin setup code: ${ADMIN_SETUP_CODE}`);
-        console.log('Keep this code private. It can only create the first admin account.');
+        console.log('No administrator account exists. Configure BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD in the server environment, then restart.');
     }
     console.log(`Local data is stored in ${DATA_FILE}`);
     console.log('This local prototype is bound to this computer only; do not expose it to the internet.');
